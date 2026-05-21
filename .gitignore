@@ -18,7 +18,7 @@ checkpoints/
 runs/
 outputs/
 submissions/
-experiments/
+experiments/*.csv
 assets/
 wandb/
 logs/

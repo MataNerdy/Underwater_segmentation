@@ -196,6 +196,7 @@ def main() -> None:
     )
 
     best_miou = -1.0
+    best_metrics: dict[str, float] = {}
     history: list[dict[str, float]] = []
     checkpoint_path = args.checkpoint_dir / "best.pth"
 
@@ -240,7 +241,7 @@ def main() -> None:
 
         if val_metrics["mean_iou"] > best_miou:
             best_miou = val_metrics["mean_iou"]
-
+            best_metrics = val_metrics
             torch.save(
                 {
                     "model_state_dict": model.state_dict(),
@@ -258,17 +259,41 @@ def main() -> None:
 
     append_results(
         args.results_csv,
-        {
-            "experiment": args.experiment_name,
-            "model": args.model,
-            "lr": args.lr,
-            "image_size": args.image_size,
-            "weighted_loss": str(args.weighted_loss),
-            "features": args.features,
-            "best_val_miou": best_miou,
-            "checkpoint": str(checkpoint_path),
-        },
+        build_results_row(
+            args=args,
+            checkpoint_path=checkpoint_path,
+            best_miou=best_miou,
+            best_metrics=best_metrics,
+        ),
     )
+
+
+def build_results_row(
+    args: argparse.Namespace,
+    checkpoint_path: Path,
+    best_miou: float,
+    best_metrics: dict[str, float],
+) -> dict[str, float | int | str]:
+    """Build one experiment summary row for experiments/results.csv."""
+    row: dict[str, float | int | str] = {
+        "experiment": args.experiment_name,
+        "model": args.model,
+        "lr": args.lr,
+        "batch_size": args.batch_size,
+        "image_size": args.image_size,
+        "epochs": args.epochs,
+        "weighted_loss": str(args.weighted_loss),
+        "features": args.features,
+        "best_val_miou": best_miou,
+        "best_val_pixel_accuracy": best_metrics.get("pixel_accuracy", float("nan")),
+        "checkpoint": str(checkpoint_path),
+    }
+    for class_id in range(args.num_classes):
+        row[f"best_val_iou_class_{class_id}"] = best_metrics.get(
+            f"iou_class_{class_id}",
+            float("nan"),
+        )
+    return row
 
 
 if __name__ == "__main__":
