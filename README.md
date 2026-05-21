@@ -104,7 +104,11 @@ python src/train.py \
 
 Сравнение размеров изображений выполняется через `--image-size 128` и
 `--image-size 256`. Итоги экспериментов добавляются в
-`experiments/results.csv`, а графики сохраняются в `assets/`.
+`experiments/results.csv`, включая best validation pixel accuracy, mean IoU и
+per-class IoU. Графики сохраняются в `assets/`.
+
+План всех экспериментов с готовыми командами находится в
+`experiments/experiment_plan.md`.
 
 ## Оценка
 
