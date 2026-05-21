@@ -10,13 +10,18 @@ __pycache__/
 .venv/
 venv/
 
+# Project data and generated artifacts
+underwater_data/
 data/
 datasets/
 checkpoints/
 runs/
 outputs/
 submissions/
+experiments/
+assets/
 wandb/
+logs/
 
 *.ckpt
 *.pth
@@ -25,11 +30,14 @@ wandb/
 *.zip
 *.tar
 *.tar.gz
-
-*.ipynb_checkpoints/
-
-logs/
+submission*.txt
 *.log
 
+# Streamlit
+.streamlit/secrets.toml
+
+# Coverage
 coverage/
 htmlcov/
+
+*.ipynb_checkpoints/

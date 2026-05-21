@@ -1,2 +1,3 @@
-"""Reusable PyTorch utilities for underwater image segmentation."""
+"""Portfolio-ready PyTorch code for underwater semantic segmentation."""
+
 

@@ -1,124 +1,157 @@
 # Underwater Segmentation
 
-Портфолио-проект по сегментации подводных изображений на PyTorch. Репозиторий
-заменяет notebook-формат на воспроизводимый код с отдельными модулями для
-датасета, метрик, обучения, оценки, инференса и визуализации.
+Портфолио-проект по 8-классовой семантической сегментации подводных сцен на
+PyTorch. В качестве baseline используется U-Net. Код вынесен из notebook-формата
+в воспроизводимые CLI-скрипты без Google Drive и абсолютных локальных путей.
+=======
 
 ## STAR
 
 ### Situation
 
-Подводные изображения часто имеют низкий контраст, цветовые искажения и шум.
-Для таких данных важно не только обучить модель сегментации, но и показать
-аккуратный инженерный пайплайн: подготовка данных, обучение, оценка качества,
-сохранение предсказаний и понятная структура проекта.
+
+Подводные изображения сложны для сегментации: в них часто есть шум, слабый
+контраст и нестабильная цветопередача. Исходный baseline находился в notebook,
+где смешивались загрузка данных, обучение, оценка, инференс и визуализации.
 
 ### Task
 
-Цель проекта — собрать чистый PyTorch-репозиторий, который можно показать в
-портфолио и быстро запустить на локальной машине или в облачной среде без
-жестко заданных путей к Google Drive и без абсолютных путей.
+Нужно было превратить baseline в чистый репозиторий для портфолио: разделить
+код по модулям, оставить конфигурируемые пути, сохранить U-Net baseline для
+8 классов масок и подготовить команды для обучения, оценки, предсказаний и
+визуализации.
 
 ### Action
 
-- Логика датасета вынесена в `src/dataset.py`.
-- Метрики Dice, IoU и pixel accuracy вынесены в `src/metrics.py`.
-- Обучение доступно через CLI в `src/train.py`.
-- Оценка модели доступна через `src/evaluate.py`.
-- Инференс и файл `submission.txt` создаются через `src/predict.py`.
-- Визуальные примеры предсказаний сохраняются через `src/visualize.py`.
-- Данные, чекпоинты и большие артефакты исключены из Git через `.gitignore`.
+- `src/dataset.py` загружает изображения и RGB-маски, преобразуя маски в классы
+  `0..7` по правилу `4 * R + 2 * G + B` после порога `> 100`.
+- `src/metrics.py` считает pixel accuracy, mean IoU и IoU по каждому классу.
+- `src/model.py` содержит компактный U-Net baseline с выходом на 8 классов.
+- `src/train.py` обучает U-Net через `CrossEntropyLoss`, поддерживает weighted
+  `CrossEntropyLoss`, разные размеры изображений и запись результатов.
+- `src/evaluate.py` оценивает чекпоинт на размеченных данных.
+- `src/predict.py` сохраняет `submission.txt` и поддерживает horizontal flip TTA.
+- `src/visualize.py` сохраняет примеры предсказаний в `assets/prediction_examples.png`.
+- `.gitignore` исключает датасеты, чекпоинты, архивы и большие артефакты.
 
 ### Result
 
-Проект стал воспроизводимым и удобным для ревью: код разделен по зонам
-ответственности, команды запуска документированы, а артефакты обучения не
-попадают в репозиторий.
+Репозиторий стал пригоден для ревью: notebook можно оставить как историю
+эксперимента, а основной пайплайн запускается через CLI. Код отделяет датасет,
+метрики, обучение, оценку и инференс, поэтому проект проще воспроизводить,
+расширять и демонстрировать.
 
-## Структура
+## Данные
+
+Ожидаемая структура:
 
 ```text
-src/
-  dataset.py      # загрузка изображений и масок
-  metrics.py      # Dice, IoU, pixel accuracy
-  model.py        # компактная U-Net модель
-  train.py        # обучение
-  evaluate.py     # оценка
-  predict.py      # предсказания и submission.txt
-  visualize.py    # визуальные примеры
-tests/
-  test_smoke.py   # быстрый smoke test
+underwater_data/
+├── train/
+│   ├── images/
+│   └── masks/
+└── test/
+    └── images/
+```
+
+Имена изображений и масок должны совпадать по stem: например, `d_r_162_.jpg`
+и `d_r_162_.bmp`.
+
+## Установка
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
 ## Установка
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
 
-## Формат данных
-
-Ожидается парная структура директорий. Имена изображений и масок должны
-совпадать по stem, например `001.png` и `001.png`.
-
-```text
-data/
-  train_images/
-    001.png
-  train_masks/
-    001.png
-  test_images/
-    101.png
-```
 
 ## Обучение
 
+U-Net baseline:
+
 ```bash
-python -m src.train \
-  --images-dir data/train_images \
-  --masks-dir data/train_masks \
-  --output-dir checkpoints \
-  --epochs 20 \
-  --batch-size 8 \
+python src/train.py \
+  --model unet \
+  --epochs 10 \
+  --batch-size 16 \
+  --lr 1e-4 \
   --image-size 256
 ```
+
+Fine-tuning с меньшим learning rate:
+
+```bash
+python src/train.py \
+  --model unet \
+  --epochs 10 \
+  --batch-size 16 \
+  --lr 1e-5 \
+  --image-size 256 \
+  --experiment-name unet_lr1e-5
+```
+
+Weighted loss:
+
+```bash
+python src/train.py \
+  --weighted-loss \
+  --experiment-name unet_weighted_ce
+```
+
+Сравнение размеров изображений выполняется через `--image-size 128` и
+`--image-size 256`. Итоги экспериментов добавляются в
+`experiments/results.csv`, а графики сохраняются в `assets/`.
 
 ## Оценка
 
 ```bash
-python -m src.evaluate \
-  --images-dir data/valid_images \
-  --masks-dir data/valid_masks \
-  --checkpoint checkpoints/best_model.pth
+python src/evaluate.py --checkpoint checkpoints/best.pth
 ```
+
+Скрипт печатает pixel accuracy, mean IoU и IoU для каждого класса.
 
 ## Предсказания
 
 ```bash
-python -m src.predict \
-  --images-dir data/test_images \
-  --checkpoint checkpoints/best_model.pth \
-  --submission-path submission.txt
+python src/predict.py \
+  --checkpoint checkpoints/best.pth \
+  --output submission.txt \
+  --tta \
+  --mode-filter
 ```
+
+Файл `submission.txt` сохраняется в формате notebook baseline: заголовок с
+формой массива и отдельные срезы масок классов. Опции `--tta` и
+`--mode-filter` повторяют inference-улучшения из notebook: horizontal flip TTA
+и сглаживание 3x3 majority vote.
 
 ## Визуализация
 
 ```bash
-python -m src.visualize \
-  --images-dir data/test_images \
-  --checkpoint checkpoints/best_model.pth \
-  --output-dir outputs/visualizations
+python src/visualize.py \
+  --checkpoint checkpoints/best.pth \
+  --output assets/prediction_examples.png
 ```
 
-## Проверка
+## Smoke Test
 
 ```bash
 pytest
 ```
 
-## Примечания
 
-Репозиторий не должен хранить датасеты, чекпоинты, архивы и большие файлы.
-Используйте относительные пути через CLI-аргументы.
+Тест проверяет кодирование RGB-масок, датасет, метрики и формат
+`submission.txt` на синтетических данных.
+
+## Что не хранится в Git
+
+Датасеты, чекпоинты, `submission.txt`, архивы, `experiments/`, `assets/` и
+другие генерируемые файлы исключены из репозитория. Все пути передаются через
+CLI-аргументы.
+
