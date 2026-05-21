@@ -48,31 +48,39 @@ class SegmentationMeter:
 
     def __init__(self, num_classes: int = 8) -> None:
         self.num_classes = num_classes
-        self.total_accuracy = 0.0
-        self.total_miou = 0.0
-        self.total_batches = 0
-        self.class_iou_sum = torch.zeros(num_classes, dtype=torch.float64)
-        self.class_iou_count = torch.zeros(num_classes, dtype=torch.float64)
+        self.correct_pixels = 0
+        self.total_pixels = 0
+        self.intersections = torch.zeros(num_classes, dtype=torch.float64)
+        self.unions = torch.zeros(num_classes, dtype=torch.float64)
+        self.target_counts = torch.zeros(num_classes, dtype=torch.float64)
 
     def update(self, logits: torch.Tensor, targets: torch.Tensor) -> None:
         """Add a batch of logits and target masks to the running metrics."""
-        class_iou = per_class_iou(logits, targets, self.num_classes).detach().cpu()
-        valid = ~torch.isnan(class_iou)
+        predictions = logits.argmax(dim=1)
+        targets = targets.long()
 
-        self.class_iou_sum[valid] += class_iou[valid].double()
-        self.class_iou_count[valid] += 1
-        self.total_accuracy += pixel_accuracy(logits, targets)
-        self.total_miou += torch.nanmean(class_iou).item()
-        self.total_batches += 1
+        self.correct_pixels += int((predictions == targets).sum().item())
+        self.total_pixels += targets.numel()
+
+        predictions = predictions.reshape(-1).detach().cpu()
+        targets = targets.reshape(-1).detach().cpu()
+
+        for class_id in range(self.num_classes):
+            pred_class = predictions == class_id
+            target_class = targets == class_id
+            self.intersections[class_id] += torch.logical_and(pred_class, target_class).sum()
+            self.unions[class_id] += torch.logical_or(pred_class, target_class).sum()
+            self.target_counts[class_id] += target_class.sum()
 
     def compute(self) -> dict[str, float]:
         """Return averaged metrics."""
-        batches = max(self.total_batches, 1)
-        per_class = self.class_iou_sum / torch.clamp(self.class_iou_count, min=1)
+        valid = self.target_counts > 0
+        per_class = torch.full((self.num_classes,), float("nan"), dtype=torch.float64)
+        per_class[valid] = self.intersections[valid] / torch.clamp(self.unions[valid], min=1)
 
         metrics = {
-            "pixel_accuracy": self.total_accuracy / batches,
-            "mean_iou": self.total_miou / batches,
+            "pixel_accuracy": self.correct_pixels / max(self.total_pixels, 1),
+            "mean_iou": torch.nanmean(per_class).item(),
         }
 
         metrics.update(
