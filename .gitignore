@@ -214,5 +214,25 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
+# Project data and generated artifacts
+underwater_data/
+data/
+datasets/
+checkpoints/
+runs/
+outputs/
+submissions/
+experiments/
+assets/
+wandb/
+*.ckpt
+*.pth
+*.pt
+*.onnx
+*.zip
+*.tar
+*.tar.gz
+submission*.txt
+
 # Streamlit
 .streamlit/secrets.toml
