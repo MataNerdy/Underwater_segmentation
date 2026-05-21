@@ -71,10 +71,10 @@ def main() -> None:
 
         logits = get_model_output(model, images)
 
-        total_loss += criterion(logits, masks).item()
+        total_loss += criterion(logits, masks).item() * images.size(0)
         meter.update(logits, masks)
 
-    print(f"loss: {total_loss / max(len(loader), 1):.4f}")
+    print(f"loss: {total_loss / max(len(loader.dataset), 1):.4f}")
 
     for name, value in meter.compute().items():
         print(f"{name}: {value:.4f}")

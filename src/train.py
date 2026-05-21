@@ -89,11 +89,11 @@ def run_epoch(
                 loss.backward()
                 optimizer.step()
 
-            total_loss += loss.item()
+            total_loss += loss.item() * images.size(0)
             meter.update(logits.detach(), masks)
 
     metrics = meter.compute()
-    metrics["loss"] = total_loss / max(len(loader), 1)
+    metrics["loss"] = total_loss / max(len(loader.dataset), 1)
     return metrics
 
 
