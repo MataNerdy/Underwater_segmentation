@@ -37,12 +37,18 @@ def main() -> None:
     """Load a checkpoint and print validation metrics."""
     args = parse_args()
     device = torch.device(args.device)
+
     checkpoint = torch.load(args.checkpoint, map_location=device)
     num_classes = args.num_classes or checkpoint.get("num_classes", 8)
     features = args.features or checkpoint.get("features", 32)
     image_size = args.image_size or checkpoint.get("image_size", 256)
 
-    dataset = UnderwaterSegmentationDataset(args.images_dir, args.masks_dir, image_size)
+    dataset = UnderwaterSegmentationDataset(
+        images_dir=args.images_dir,
+        masks_dir=args.masks_dir,
+        image_size=image_size,
+    )
+
     loader = DataLoader(
         dataset,
         batch_size=args.batch_size,
@@ -56,15 +62,20 @@ def main() -> None:
 
     criterion = torch.nn.CrossEntropyLoss()
     meter = SegmentationMeter(num_classes=num_classes)
+
     total_loss = 0.0
+
     for batch in tqdm(loader, desc="evaluate"):
         images = batch["image"].to(device)
         masks = batch["mask"].to(device).long()
+
         logits = get_model_output(model, images)
+
         total_loss += criterion(logits, masks).item()
         meter.update(logits, masks)
 
     print(f"loss: {total_loss / max(len(loader), 1):.4f}")
+
     for name, value in meter.compute().items():
         print(f"{name}: {value:.4f}")
 

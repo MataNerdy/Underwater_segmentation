@@ -36,6 +36,7 @@ def main() -> None:
     """Save a grid with images, predicted masks and optional ground truth masks."""
     args = parse_args()
     device = torch.device(args.device)
+
     checkpoint = torch.load(args.checkpoint, map_location=device)
     num_classes = args.num_classes or checkpoint.get("num_classes", 8)
     features = args.features or checkpoint.get("features", 32)
@@ -49,9 +50,11 @@ def main() -> None:
     model.eval()
 
     examples = []
+
     for index, batch in enumerate(loader):
         if index >= args.num_examples:
             break
+
         image = batch["image"].to(device)
         logits = get_model_output(model, image)
         prediction = logits.argmax(dim=1)[0].cpu()
@@ -61,19 +64,28 @@ def main() -> None:
         raise ValueError("No examples found for visualization.")
 
     columns = 3 if examples[0][2] is not None else 2
-    fig, axes = plt.subplots(len(examples), columns, figsize=(4 * columns, 4 * len(examples)))
+    fig, axes = plt.subplots(
+        len(examples),
+        columns,
+        figsize=(4 * columns, 4 * len(examples)),
+    )
+
     if len(examples) == 1:
         axes = [axes]
 
     for row_index, (image, prediction, mask) in enumerate(examples):
         row_axes = axes[row_index]
+
         row_axes[0].imshow(denormalize_image(image).permute(1, 2, 0))
         row_axes[0].set_title("Image")
+
         row_axes[1].imshow(prediction, vmin=0, vmax=num_classes - 1, cmap="tab10")
         row_axes[1].set_title("Prediction")
+
         if mask is not None:
             row_axes[2].imshow(mask[0], vmin=0, vmax=num_classes - 1, cmap="tab10")
             row_axes[2].set_title("Ground truth")
+
         for axis in row_axes:
             axis.axis("off")
 

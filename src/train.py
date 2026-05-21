@@ -52,6 +52,7 @@ def make_loss(args: argparse.Namespace, device: torch.device) -> nn.Module:
     """Create CrossEntropy loss, optionally with class weights from training masks."""
     if not args.weighted_loss:
         return nn.CrossEntropyLoss()
+
     weights = compute_class_weights(args.masks_dir, num_classes=args.num_classes).to(device)
     return nn.CrossEntropyLoss(weight=weights)
 
@@ -67,10 +68,12 @@ def run_epoch(
     """Run one train or validation epoch."""
     is_train = optimizer is not None
     model.train(is_train)
+
     total_loss = 0.0
     meter = SegmentationMeter(num_classes=num_classes)
 
     context = torch.enable_grad() if is_train else torch.no_grad()
+
     with context:
         for batch in tqdm(loader, desc="train" if is_train else "valid", leave=False):
             images = batch["image"].to(device)
@@ -97,18 +100,23 @@ def run_epoch(
 def append_results(path: Path, row: dict[str, float | int | str]) -> None:
     """Append experiment metrics to a CSV file."""
     path.parent.mkdir(parents=True, exist_ok=True)
+
     fieldnames = list(row.keys())
     write_header = not path.exists()
+
     with path.open("a", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
+
         if write_header:
             writer.writeheader()
+
         writer.writerow(row)
 
 
 def save_curves(history: list[dict[str, float]], assets_dir: Path) -> None:
     """Save loss and mIoU curves for portfolio reporting."""
     assets_dir.mkdir(parents=True, exist_ok=True)
+
     epochs = [row["epoch"] for row in history]
 
     plt.figure(figsize=(7, 4))
@@ -136,11 +144,18 @@ def main() -> None:
     """Train a segmentation model and save the best checkpoint by validation mIoU."""
     args = parse_args()
     device = torch.device(args.device)
+
     args.checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
-    dataset = UnderwaterSegmentationDataset(args.images_dir, args.masks_dir, args.image_size)
+    dataset = UnderwaterSegmentationDataset(
+        images_dir=args.images_dir,
+        masks_dir=args.masks_dir,
+        image_size=args.image_size,
+    )
+
     val_size = max(1, int(len(dataset) * args.val_split))
     train_size = len(dataset) - val_size
+
     if train_size <= 0:
         raise ValueError("Dataset must contain at least two samples for a validation split.")
 
@@ -149,12 +164,14 @@ def main() -> None:
         [train_size, val_size],
         generator=torch.Generator().manual_seed(42),
     )
+
     train_loader = DataLoader(
         train_dataset,
         batch_size=args.batch_size,
         shuffle=True,
         num_workers=args.num_workers,
     )
+
     val_loader = DataLoader(
         val_dataset,
         batch_size=args.batch_size,
@@ -164,7 +181,13 @@ def main() -> None:
 
     model = build_model(num_classes=args.num_classes, features=args.features).to(device)
     criterion = make_loss(args, device)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+
+    optimizer = torch.optim.AdamW(
+        model.parameters(),
+        lr=args.lr,
+        weight_decay=args.weight_decay,
+    )
+
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
         mode="max",
@@ -178,21 +201,23 @@ def main() -> None:
 
     for epoch in range(1, args.epochs + 1):
         train_metrics = run_epoch(
-            model,
-            train_loader,
-            criterion,
-            device,
-            optimizer,
-            args.num_classes,
+            model=model,
+            loader=train_loader,
+            criterion=criterion,
+            device=device,
+            optimizer=optimizer,
+            num_classes=args.num_classes,
         )
+
         val_metrics = run_epoch(
-            model,
-            val_loader,
-            criterion,
-            device,
+            model=model,
+            loader=val_loader,
+            criterion=criterion,
+            device=device,
             optimizer=None,
             num_classes=args.num_classes,
         )
+
         scheduler.step(val_metrics["mean_iou"])
 
         row = {
@@ -202,9 +227,12 @@ def main() -> None:
             "train_mean_iou": train_metrics["mean_iou"],
             "val_mean_iou": val_metrics["mean_iou"],
         }
+
         history.append(row)
+
         print(
-            f"epoch={epoch:03d} train_loss={train_metrics['loss']:.4f} "
+            f"epoch={epoch:03d} "
+            f"train_loss={train_metrics['loss']:.4f} "
             f"val_loss={val_metrics['loss']:.4f} "
             f"val_miou={val_metrics['mean_iou']:.4f} "
             f"val_acc={val_metrics['pixel_accuracy']:.4f}"
@@ -212,6 +240,7 @@ def main() -> None:
 
         if val_metrics["mean_iou"] > best_miou:
             best_miou = val_metrics["mean_iou"]
+
             torch.save(
                 {
                     "model_state_dict": model.state_dict(),
@@ -226,6 +255,7 @@ def main() -> None:
             )
 
     save_curves(history, args.assets_dir)
+
     append_results(
         args.results_csv,
         {

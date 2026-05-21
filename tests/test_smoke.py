@@ -21,7 +21,6 @@ def test_dataset_metrics_and_submission_smoke(tmp_path):
     masks_dir = tmp_path / "masks"
     images_dir.mkdir()
     masks_dir.mkdir()
-
     image = np.zeros((16, 16, 3), dtype=np.uint8)
     image[:, :, 1] = 120
     mask = np.zeros((16, 16, 3), dtype=np.uint8)
@@ -64,3 +63,4 @@ def test_dataset_metrics_and_submission_smoke(tmp_path):
     noisy = torch.zeros(1, 5, 5, dtype=torch.long)
     noisy[:, 2, 2] = 7
     assert mode_filter_3x3(noisy, num_classes=8)[0, 2, 2].item() == 0
+

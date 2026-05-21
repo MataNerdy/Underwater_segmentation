@@ -40,6 +40,7 @@ def parse_args() -> argparse.Namespace:
 def save_submission(labels: np.ndarray, output_path: Path) -> None:
     """Save class-index masks in the notebook-compatible submission.txt format."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
+
     with output_path.open("w", encoding="utf-8") as handle:
         handle.write(f"# Array shape: {labels.shape}\n")
         for mask in labels:
@@ -59,13 +60,16 @@ def load_submission(path: str | Path) -> np.ndarray:
                     slices.append(np.array(current_slice, dtype=np.uint8))
                     current_slice = []
                 continue
+
             if line.strip():
                 current_slice.append([int(value) for value in line.split()])
 
     if current_slice:
         slices.append(np.array(current_slice, dtype=np.uint8))
+
     if not slices:
         raise ValueError(f"No masks found in submission file: {path}")
+
     return np.stack(slices, axis=0)
 
 
@@ -77,23 +81,33 @@ def compare_submissions(
     """Compare two submission files with pixel accuracy, mean IoU and per-class IoU."""
     predictions = load_submission(prediction_path)
     targets = load_submission(target_path)
+
     if predictions.shape != targets.shape:
         raise ValueError(f"Shape mismatch: {predictions.shape} vs {targets.shape}")
 
-    result: dict[str, float] = {"pixel_accuracy": float((predictions == targets).mean())}
+    result: dict[str, float] = {
+        "pixel_accuracy": float((predictions == targets).mean())
+    }
+
     ious = []
+
     for class_id in range(num_classes):
         pred_class = predictions == class_id
         target_class = targets == class_id
+
         if not target_class.any():
             result[f"iou_class_{class_id}"] = float("nan")
             continue
+
         intersection = np.logical_and(pred_class, target_class).sum()
         union = np.logical_or(pred_class, target_class).sum()
         iou = float(intersection / max(union, 1))
+
         result[f"iou_class_{class_id}"] = iou
         ious.append(iou)
+
     result["mean_iou"] = float(np.mean(ious)) if ious else float("nan")
+
     return result
 
 
@@ -109,10 +123,13 @@ def mode_filter_3x3(labels: torch.Tensor, num_classes: int = 8) -> torch.Tensor:
 def predict_logits(model: torch.nn.Module, images: torch.Tensor, tta: bool) -> torch.Tensor:
     """Predict logits, optionally averaging original and horizontal-flip outputs."""
     logits = get_model_output(model, images)
+
     if not tta:
         return logits
+
     flipped = torch.flip(images, dims=[-1])
     flipped_logits = torch.flip(get_model_output(model, flipped), dims=[-1])
+
     return (logits + flipped_logits) / 2.0
 
 
@@ -121,13 +138,22 @@ def main() -> None:
     """Generate predictions and save submission.txt."""
     args = parse_args()
     device = torch.device(args.device)
+
     checkpoint = torch.load(args.checkpoint, map_location=device)
     num_classes = args.num_classes or checkpoint.get("num_classes", 8)
     features = args.features or checkpoint.get("features", 32)
     image_size = args.image_size or checkpoint.get("image_size", 256)
 
-    dataset = UnderwaterSegmentationDataset(args.images_dir, image_size=image_size)
-    loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=False)
+    dataset = UnderwaterSegmentationDataset(
+        images_dir=args.images_dir,
+        image_size=image_size,
+    )
+
+    loader = DataLoader(
+        dataset,
+        batch_size=args.batch_size,
+        shuffle=False,
+    )
 
     model = build_model(num_classes=num_classes, features=features).to(device)
     model.load_state_dict(checkpoint["model_state_dict"])
@@ -135,8 +161,10 @@ def main() -> None:
 
     labels: list[np.ndarray] = []
     image_ids: list[str] = []
+
     for batch in tqdm(loader, desc="predict"):
         images = batch["image"].to(device)
+
         logits = predict_logits(model, images, args.tta)
         logits = F.interpolate(
             logits,
@@ -144,10 +172,17 @@ def main() -> None:
             mode="bilinear",
             align_corners=False,
         )
+
         predictions_tensor = logits.argmax(dim=1)
+
         if args.mode_filter:
-            predictions_tensor = mode_filter_3x3(predictions_tensor, num_classes=num_classes)
+            predictions_tensor = mode_filter_3x3(
+                predictions_tensor,
+                num_classes=num_classes,
+            )
+
         predictions = predictions_tensor.cpu().numpy().astype(np.uint8)
+
         labels.extend(predictions)
         image_ids.extend(batch["image_id"])
 
@@ -156,6 +191,7 @@ def main() -> None:
 
     if args.predictions_dir:
         args.predictions_dir.mkdir(parents=True, exist_ok=True)
+
         for image_id, mask in zip(image_ids, labels_array, strict=True):
             Image.fromarray(mask, mode="L").save(args.predictions_dir / f"{image_id}.png")
 

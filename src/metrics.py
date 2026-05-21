@@ -25,9 +25,11 @@ def per_class_iou(
     for class_id in range(num_classes):
         pred_class = predictions == class_id
         target_class = targets == class_id
+
         if target_class.sum() == 0:
             values.append(torch.tensor(float("nan"), device=logits.device))
             continue
+
         intersection = torch.logical_and(pred_class, target_class).sum().float()
         union = torch.logical_or(pred_class, target_class).sum().float()
         values.append((intersection + eps) / (union + eps))
@@ -56,6 +58,7 @@ class SegmentationMeter:
         """Add a batch of logits and target masks to the running metrics."""
         class_iou = per_class_iou(logits, targets, self.num_classes).detach().cpu()
         valid = ~torch.isnan(class_iou)
+
         self.class_iou_sum[valid] += class_iou[valid].double()
         self.class_iou_count[valid] += 1
         self.total_accuracy += pixel_accuracy(logits, targets)
@@ -66,10 +69,14 @@ class SegmentationMeter:
         """Return averaged metrics."""
         batches = max(self.total_batches, 1)
         per_class = self.class_iou_sum / torch.clamp(self.class_iou_count, min=1)
+
         metrics = {
             "pixel_accuracy": self.total_accuracy / batches,
             "mean_iou": self.total_miou / batches,
         }
-        metrics.update({f"iou_class_{idx}": value.item() for idx, value in enumerate(per_class)})
-        return metrics
 
+        metrics.update(
+            {f"iou_class_{idx}": value.item() for idx, value in enumerate(per_class)}
+        )
+
+        return metrics

@@ -10,6 +10,7 @@ from torch.utils.data import Dataset
 
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"}
+
 IMAGENET_MEAN = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1)
 IMAGENET_STD = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1)
 
@@ -55,12 +56,16 @@ class UnderwaterSegmentationDataset(Dataset):
 
         if not self.images_dir.exists():
             raise FileNotFoundError(f"Images directory does not exist: {self.images_dir}")
+
         if self.masks_dir and not self.masks_dir.exists():
             raise FileNotFoundError(f"Masks directory does not exist: {self.masks_dir}")
 
         self.image_paths = sorted(
-            path for path in self.images_dir.iterdir() if path.suffix.lower() in IMAGE_EXTENSIONS
+            path
+            for path in self.images_dir.iterdir()
+            if path.suffix.lower() in IMAGE_EXTENSIONS
         )
+
         if not self.image_paths:
             raise ValueError(f"No images found in {self.images_dir}")
 
@@ -70,6 +75,7 @@ class UnderwaterSegmentationDataset(Dataset):
     def __getitem__(self, index: int) -> dict[str, torch.Tensor | str]:
         image_path = self.image_paths[index]
         image = Image.open(image_path)
+
         sample: dict[str, torch.Tensor | str] = {
             "image": image_to_tensor(image, self.image_size),
             "image_id": image_path.stem,
@@ -89,6 +95,7 @@ def find_mask_path(masks_dir: Path, stem: str) -> Path:
         path = masks_dir / f"{stem}{suffix}"
         if path.exists():
             return path
+
     raise FileNotFoundError(f"Mask for image '{stem}' was not found in {masks_dir}")
 
 
@@ -100,18 +107,23 @@ def compute_class_weights(
     """Compute median-frequency class weights from RGB masks."""
     masks_dir = Path(masks_dir)
     counts = np.zeros(num_classes, dtype=np.int64)
+
     for mask_path in sorted(masks_dir.iterdir()):
         if mask_path.suffix.lower() not in IMAGE_EXTENSIONS:
             continue
+
         mask = rgb_mask_to_index(Image.open(mask_path))
         counts += np.bincount(mask.reshape(-1), minlength=num_classes)[:num_classes]
 
     frequencies = counts / max(counts.sum(), 1)
     non_zero = frequencies[frequencies > 0]
+
     if len(non_zero) == 0:
         return torch.ones(num_classes, dtype=torch.float32)
+
     median = np.median(non_zero)
     weights = median / (frequencies + eps)
+
     return torch.tensor(weights, dtype=torch.float32)
 
 
