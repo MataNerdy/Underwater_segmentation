@@ -9,8 +9,8 @@ else
   RUN_SUFFIX="main"
 fi
 
-DATASET_NAME="${DATASET_NAME:-underwater-segmentation}"
-DATA_DIR="${DATA_DIR:-/kaggle/input/${DATASET_NAME}/underwater_data}"
+DATASET_NAME="${DATASET_NAME:-datasets/ashish2001/semantic-segmentation-of-underwater-imagery-suim}"
+DATA_DIR="${DATA_DIR:-/kaggle/input/${DATASET_NAME}}"
 
 TRAIN_IMAGES_DIR="${TRAIN_IMAGES_DIR:-${DATA_DIR}/train/images}"
 TRAIN_MASKS_DIR="${TRAIN_MASKS_DIR:-${DATA_DIR}/train/masks}"
