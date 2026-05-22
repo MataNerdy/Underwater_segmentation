@@ -39,6 +39,7 @@ def main() -> None:
     device = torch.device(args.device)
 
     checkpoint = torch.load(args.checkpoint, map_location=device)
+    model_name = checkpoint.get("model", "unet")
     num_classes = args.num_classes or checkpoint.get("num_classes", 8)
     features = args.features or checkpoint.get("features", 32)
     image_size = args.image_size or checkpoint.get("image_size", 256)
@@ -56,7 +57,11 @@ def main() -> None:
         num_workers=args.num_workers,
     )
 
-    model = build_model(num_classes=num_classes, features=features).to(device)
+    model = build_model(
+        model_name=model_name,
+        num_classes=num_classes,
+        features=features,
+    ).to(device)
     model.load_state_dict(checkpoint["model_state_dict"])
     model.eval()
 

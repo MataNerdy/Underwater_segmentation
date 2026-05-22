@@ -1,8 +1,9 @@
 # Underwater Segmentation
 
 Портфолио-проект по 8-классовой семантической сегментации подводных сцен на
-PyTorch. В качестве baseline используется U-Net. Код вынесен из notebook-формата
-в воспроизводимые CLI-скрипты без Google Drive и абсолютных локальных путей.
+PyTorch. Проект поддерживает два baseline-подхода: U-Net и DeepLabV3 ResNet50.
+Код вынесен из notebook-формата в воспроизводимые CLI-скрипты без Google Drive
+и абсолютных локальных путей.
 
 
 ### Situation
@@ -15,18 +16,19 @@ PyTorch. В качестве baseline используется U-Net. Код в�
 ### Task
 
 Нужно было превратить baseline в чистый репозиторий для портфолио: разделить
-код по модулям, оставить конфигурируемые пути, сохранить U-Net baseline для
-8 классов масок и подготовить команды для обучения, оценки, предсказаний и
-визуализации.
+код по модулям, оставить конфигурируемые пути, сохранить U-Net baseline,
+добавить DeepLabV3 ResNet50 как второй вариант модели и подготовить команды для
+обучения, оценки, предсказаний и визуализации.
 
 ### Action
 
 - `src/dataset.py` загружает изображения и RGB-маски, преобразуя маски в классы
   `0..7` по правилу `4 * R + 2 * G + B` после порога `> 100`.
 - `src/metrics.py` считает pixel accuracy, mean IoU и IoU по каждому классу.
-- `src/model.py` содержит компактный U-Net baseline с выходом на 8 классов.
-- `src/train.py` обучает U-Net через `CrossEntropyLoss`, поддерживает weighted
-  `CrossEntropyLoss`, разные размеры изображений и запись результатов.
+- `src/model.py` содержит компактный U-Net baseline и DeepLabV3 ResNet50 с
+  выходом на 8 классов.
+- `src/train.py` обучает выбранную модель через `CrossEntropyLoss`, поддерживает
+  weighted `CrossEntropyLoss`, разные размеры изображений и запись результатов.
 - `src/evaluate.py` оценивает чекпоинт на размеченных данных.
 - `src/predict.py` сохраняет `submission.txt` и поддерживает horizontal flip TTA.
 - `src/visualize.py` сохраняет примеры предсказаний в `assets/prediction_examples.png`.
@@ -63,19 +65,36 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Установка
-
-```bash
-python -m venv .venv
-
-
 ## Обучение
 
-U-Net baseline:
+### U-Net baseline
 
 ```bash
 python src/train.py \
   --model unet \
+  --epochs 10 \
+  --batch-size 16 \
+  --lr 1e-4 \
+  --image-size 256
+```
+
+### DeepLabV3 ResNet50 baseline
+
+```bash
+python src/train.py \
+  --model deeplabv3_resnet50 \
+  --epochs 10 \
+  --batch-size 16 \
+  --lr 1e-4 \
+  --image-size 256
+```
+
+Для инициализации pretrained backbone:
+
+```bash
+python src/train.py \
+  --model deeplabv3_resnet50 \
+  --pretrained-backbone \
   --epochs 10 \
   --batch-size 16 \
   --lr 1e-4 \
