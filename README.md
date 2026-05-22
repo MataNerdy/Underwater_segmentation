@@ -129,6 +129,54 @@ per-class IoU. Графики сохраняются в `assets/`.
 План всех экспериментов с готовыми командами находится в
 `experiments/experiment_plan.md`.
 
+## Kaggle
+
+Для Kaggle есть два удобных варианта запуска:
+
+- notebook: `notebooks/kaggle_underwater_experiments.ipynb`;
+- shell runner: `scripts/run_kaggle_experiments.sh`.
+
+Runner по умолчанию запускает основные эксперименты на 20 эпох, потому что
+лучший предыдущий результат был получен после 20 эпох:
+
+```bash
+chmod +x scripts/run_kaggle_experiments.sh
+DATASET_NAME=your-kaggle-dataset-name ./scripts/run_kaggle_experiments.sh
+```
+
+По умолчанию путь к данным строится так:
+
+```text
+/kaggle/input/${DATASET_NAME}/underwater_data
+```
+
+Если структура датасета другая, задайте путь напрямую:
+
+```bash
+DATA_DIR=/kaggle/input/your-kaggle-dataset-name/underwater_data \
+  ./scripts/run_kaggle_experiments.sh
+```
+
+Быстрый smoke-test режим запускает те же эксперименты на 1 эпоху:
+
+```bash
+DATASET_NAME=your-kaggle-dataset-name ./scripts/run_kaggle_experiments.sh --smoke
+```
+
+Runner выполняет:
+
+- U-Net, `image_size=128`, `epochs=20`;
+- U-Net, `image_size=256`, `epochs=20`;
+- U-Net weighted CrossEntropyLoss, `image_size=256`, `epochs=20`;
+- DeepLabV3 ResNet50, `image_size=256`, `epochs=20`;
+- DeepLabV3 ResNet50 с pretrained backbone, `image_size=256`, `epochs=20`.
+
+Все outputs сохраняются в `/kaggle/working`:
+
+- checkpoints: `/kaggle/working/checkpoints`;
+- results CSV: `/kaggle/working/experiments/results.csv`;
+- plots: `/kaggle/working/assets`.
+
 ## Оценка
 
 ```bash
