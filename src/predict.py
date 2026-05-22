@@ -14,7 +14,7 @@ from tqdm import tqdm
 if __package__ is None or __package__ == "":
     sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from src.dataset import UnderwaterSegmentationDataset
+from src.dataset import DEFAULT_DATA_DIR, UnderwaterSegmentationDataset, colorize_mask, resolve_dataset_paths
 from src.model import build_model
 from src.train import get_model_output
 
@@ -22,7 +22,8 @@ from src.train import get_model_output
 def parse_args() -> argparse.Namespace:
     """Parse prediction CLI arguments."""
     parser = argparse.ArgumentParser(description="Generate underwater segmentation submission.")
-    parser.add_argument("--images-dir", default=Path("underwater_data/test/images"), type=Path)
+    parser.add_argument("--data-dir", default=DEFAULT_DATA_DIR, type=Path)
+    parser.add_argument("--images-dir", default=None, type=Path)
     parser.add_argument("--checkpoint", default=Path("checkpoints/best.pth"), type=Path)
     parser.add_argument("--output", default=Path("submission.txt"), type=Path)
     parser.add_argument("--predictions-dir", default=None, type=Path)
@@ -139,6 +140,11 @@ def main() -> None:
     args = parse_args()
     device = torch.device(args.device)
 
+    if args.images_dir is None:
+        args.images_dir = resolve_dataset_paths(args.data_dir)["test_images"]
+    else:
+        print(f"Selected prediction images dir: {args.images_dir}")
+
     checkpoint = torch.load(args.checkpoint, map_location=device)
     model_name = checkpoint.get("model", "unet")
     num_classes = args.num_classes or checkpoint.get("num_classes", 8)
@@ -196,9 +202,15 @@ def main() -> None:
 
     if args.predictions_dir:
         args.predictions_dir.mkdir(parents=True, exist_ok=True)
+        raw_dir = args.predictions_dir / "predictions_raw"
+        color_dir = args.predictions_dir / "predictions_color"
+        raw_dir.mkdir(parents=True, exist_ok=True)
+        color_dir.mkdir(parents=True, exist_ok=True)
 
         for image_id, mask in zip(image_ids, labels_array, strict=True):
-            Image.fromarray(mask, mode="L").save(args.predictions_dir / f"{image_id}.png")
+            Image.fromarray(mask).save(raw_dir / f"{image_id}.png")
+            colorize_mask(mask).save(color_dir / f"{image_id}.png")
+            Image.fromarray(mask).save(args.predictions_dir / f"{image_id}.png")
 
 
 if __name__ == "__main__":

@@ -1,108 +1,112 @@
 # Experiment Plan
 
-This project supports the required experiment pipeline through CLI arguments.
-Full training can be expensive, so the commands below are intended for a
-configured machine with the dataset available under `underwater_data/`.
+This project supports Kaggle-first experiment runs for SUIM semantic
+segmentation. The canonical dataset location is:
+
+```text
+/kaggle/input/datasets/ashish2001/semantic-segmentation-of-underwater-imagery-suim
+```
+
+The code resolves directories with fallbacks:
+
+- `train/images` first, otherwise `train_val/images`
+- `train/masks` first, otherwise `train_val/masks`
+- `test/images` first, otherwise `TEST/images`
 
 ## Shared Outputs
 
-- Final experiment summaries: `experiments/results.csv`
-- Training curves: `assets/loss_curves.png` and `assets/miou_curves.png`
-- Prediction examples: `assets/prediction_examples.png`
-- Best checkpoint per run: `checkpoints/best.pth`
+- Final experiment summaries: `/kaggle/working/experiments/results.csv`
+- Training curves: `/kaggle/working/assets/<experiment>/loss_curves.png`
+- mIoU curves: `/kaggle/working/assets/<experiment>/miou_curves.png`
+- Prediction examples: `/kaggle/working/assets/prediction_examples.png`
+- Checkpoints: `/kaggle/working/checkpoints/<experiment>/best.pth`
 
 ## Smoke Test
 
 ```bash
-python3 -m compileall src tests
-pytest
+./scripts/run_kaggle_experiments.sh --smoke
 ```
 
-## Full Training Commands
+Smoke mode runs the full experiment list for 1 epoch.
 
-### 1. U-Net baseline, lr=1e-4, image_size=256
+## Main Kaggle Experiments
+
+The documented default for real experiments is 20 epochs.
+
+```bash
+./scripts/run_kaggle_experiments.sh
+```
+
+The runner executes:
+
+1. U-Net, `image_size=128`, `epochs=20`
+2. U-Net, `image_size=256`, `epochs=20`
+3. U-Net weighted CrossEntropyLoss, `image_size=256`, `epochs=20`
+4. DeepLabV3 ResNet50, `image_size=256`, `epochs=20`
+5. DeepLabV3 ResNet50 pretrained backbone, `image_size=256`, `epochs=20`
+
+## Manual Commands
+
+### U-Net, image_size=128
 
 ```bash
 python src/train.py \
-  --experiment-name unet_lr1e-4_size256 \
-  --lr 1e-4 \
-  --batch-size 16 \
-  --image-size 256 \
-  --epochs 10
-```
-
-### 2. U-Net lower learning rate, lr=1e-5
-
-```bash
-python src/train.py \
-  --experiment-name unet_lr1e-5_size256 \
-  --lr 1e-5 \
-  --batch-size 16 \
-  --image-size 256 \
-  --epochs 10
-```
-
-### 3. U-Net smaller image size, image_size=128
-
-```bash
-python src/train.py \
-  --experiment-name unet_lr1e-4_size128 \
-  --lr 1e-4 \
-  --batch-size 16 \
+  --model unet \
+  --experiment-name unet_size128_main \
   --image-size 128 \
-  --epochs 10
+  --epochs 20
 ```
 
-### 4. U-Net weighted CrossEntropyLoss
+### U-Net, image_size=256
 
 ```bash
 python src/train.py \
-  --experiment-name unet_weighted_ce_size256 \
-  --lr 1e-4 \
-  --batch-size 16 \
+  --model unet \
+  --experiment-name unet_size256_main \
   --image-size 256 \
-  --epochs 10 \
+  --epochs 20
+```
+
+### U-Net weighted CrossEntropyLoss
+
+```bash
+python src/train.py \
+  --model unet \
+  --experiment-name unet_weighted_ce_size256_main \
+  --image-size 256 \
+  --epochs 20 \
   --weighted-loss
 ```
 
-### 5. Horizontal flip TTA prediction
+### DeepLabV3 ResNet50
+
+```bash
+python src/train.py \
+  --model deeplabv3_resnet50 \
+  --experiment-name deeplabv3_resnet50_size256_main \
+  --image-size 256 \
+  --epochs 20
+```
+
+### DeepLabV3 ResNet50 pretrained backbone
+
+```bash
+python src/train.py \
+  --model deeplabv3_resnet50 \
+  --pretrained-backbone \
+  --experiment-name deeplabv3_resnet50_pretrained_size256_main \
+  --image-size 256 \
+  --epochs 20
+```
+
+## Prediction Visualization
 
 ```bash
 python src/predict.py \
-  --checkpoint checkpoints/best.pth \
-  --images-dir underwater_data/test/images \
-  --output submission.txt \
+  --checkpoint /kaggle/working/checkpoints/deeplabv3_resnet50_pretrained_size256_main/best.pth \
+  --predictions-dir /kaggle/working/predictions \
   --tta
 ```
 
-## Evaluation and Visualization
-
-```bash
-python src/evaluate.py \
-  --checkpoint checkpoints/best.pth \
-  --images-dir underwater_data/train/images \
-  --masks-dir underwater_data/train/masks
-```
-
-```bash
-python src/visualize.py \
-  --checkpoint checkpoints/best.pth \
-  --images-dir underwater_data/test/images \
-  --output assets/prediction_examples.png
-```
-
-## Results Tracking
-
-Each training run appends one row to `experiments/results.csv` with:
-
-- experiment name
-- model
-- learning rate
-- batch size
-- image size
-- epoch count
-- weighted loss flag
-- best validation mean IoU
-- best validation pixel accuracy
-- best validation per-class IoU
-- checkpoint path
+`predict.py` writes raw class-id masks to `predictions_raw/` and colored RGB
+visualizations to `predictions_color/`.

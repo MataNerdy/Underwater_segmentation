@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from PIL import Image
 
-from src.dataset import UnderwaterSegmentationDataset, rgb_mask_to_index
+from src.dataset import CLASS_PALETTE, UnderwaterSegmentationDataset, colorize_mask, rgb_mask_to_index
 from src.metrics import SegmentationMeter, mean_iou, pixel_accuracy
 from src.model import build_model
 from src.predict import compare_submissions, load_submission, mode_filter_3x3, save_submission
@@ -14,6 +14,15 @@ def test_rgb_mask_to_index_uses_project_encoding():
     mask = np.array([[[255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 255]]])
     encoded = rgb_mask_to_index(mask)
     assert encoded.tolist() == [[4, 2, 1, 7]]
+
+
+def test_colorize_mask_uses_stable_palette():
+    mask = np.array([[0, 1, 7]], dtype=np.uint8)
+    color = np.asarray(colorize_mask(mask))
+    assert color.shape == (1, 3, 3)
+    assert color[0, 0].tolist() == CLASS_PALETTE[0].tolist()
+    assert color[0, 1].tolist() == CLASS_PALETTE[1].tolist()
+    assert color[0, 2].tolist() == CLASS_PALETTE[7].tolist()
 
 
 def test_dataset_metrics_and_submission_smoke(tmp_path):
@@ -63,4 +72,3 @@ def test_dataset_metrics_and_submission_smoke(tmp_path):
     noisy = torch.zeros(1, 5, 5, dtype=torch.long)
     noisy[:, 2, 2] = 7
     assert mode_filter_3x3(noisy, num_classes=8)[0, 2, 2].item() == 0
-

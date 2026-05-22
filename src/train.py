@@ -14,7 +14,7 @@ from tqdm import tqdm
 if __package__ is None or __package__ == "":
     sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from src.dataset import UnderwaterSegmentationDataset, compute_class_weights
+from src.dataset import DEFAULT_DATA_DIR, UnderwaterSegmentationDataset, compute_class_weights, resolve_dataset_paths
 from src.metrics import SegmentationMeter
 from src.model import MODEL_CHOICES, build_model
 
@@ -22,8 +22,9 @@ from src.model import MODEL_CHOICES, build_model
 def parse_args() -> argparse.Namespace:
     """Parse training CLI arguments."""
     parser = argparse.ArgumentParser(description="Train underwater segmentation model.")
-    parser.add_argument("--images-dir", default=Path("underwater_data/train/images"), type=Path)
-    parser.add_argument("--masks-dir", default=Path("underwater_data/train/masks"), type=Path)
+    parser.add_argument("--data-dir", default=DEFAULT_DATA_DIR, type=Path)
+    parser.add_argument("--images-dir", default=None, type=Path)
+    parser.add_argument("--masks-dir", default=None, type=Path)
     parser.add_argument("--model", default="unet", choices=MODEL_CHOICES)
     parser.add_argument("--epochs", default=10, type=int)
     parser.add_argument("--batch-size", default=16, type=int)
@@ -42,6 +43,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--assets-dir", default=Path("assets"), type=Path)
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     args = parser.parse_args()
+    if args.images_dir is None or args.masks_dir is None:
+        resolved_paths = resolve_dataset_paths(args.data_dir)
+        args.images_dir = args.images_dir or resolved_paths["train_images"]
+        args.masks_dir = args.masks_dir or resolved_paths["train_masks"]
+    else:
+        print(f"Selected train images dir: {args.images_dir}")
+        print(f"Selected train masks dir: {args.masks_dir}")
     if args.experiment_name is None:
         args.experiment_name = f"{args.model}_8class_baseline"
     return args

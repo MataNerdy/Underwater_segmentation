@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 if __package__ is None or __package__ == "":
     sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from src.dataset import UnderwaterSegmentationDataset, denormalize_image
+from src.dataset import DEFAULT_DATA_DIR, UnderwaterSegmentationDataset, colorize_mask, denormalize_image, resolve_dataset_paths
 from src.model import build_model
 from src.train import get_model_output
 
@@ -19,7 +19,8 @@ from src.train import get_model_output
 def parse_args() -> argparse.Namespace:
     """Parse visualization CLI arguments."""
     parser = argparse.ArgumentParser(description="Save prediction examples for portfolio review.")
-    parser.add_argument("--images-dir", default=Path("underwater_data/test/images"), type=Path)
+    parser.add_argument("--data-dir", default=DEFAULT_DATA_DIR, type=Path)
+    parser.add_argument("--images-dir", default=None, type=Path)
     parser.add_argument("--checkpoint", default=Path("checkpoints/best.pth"), type=Path)
     parser.add_argument("--output", default=Path("assets/prediction_examples.png"), type=Path)
     parser.add_argument("--masks-dir", default=None, type=Path)
@@ -36,6 +37,14 @@ def main() -> None:
     """Save a grid with images, predicted masks and optional ground truth masks."""
     args = parse_args()
     device = torch.device(args.device)
+
+    if args.images_dir is None:
+        resolved_paths = resolve_dataset_paths(args.data_dir)
+        args.images_dir = resolved_paths["test_images"]
+    else:
+        print(f"Selected visualization images dir: {args.images_dir}")
+    if args.masks_dir is not None:
+        print(f"Selected visualization masks dir: {args.masks_dir}")
 
     checkpoint = torch.load(args.checkpoint, map_location=device)
     model_name = checkpoint.get("model", "unet")
@@ -84,11 +93,11 @@ def main() -> None:
         row_axes[0].imshow(denormalize_image(image).permute(1, 2, 0))
         row_axes[0].set_title("Image")
 
-        row_axes[1].imshow(prediction, vmin=0, vmax=num_classes - 1, cmap="tab10")
+        row_axes[1].imshow(colorize_mask(prediction))
         row_axes[1].set_title("Prediction")
 
         if mask is not None:
-            row_axes[2].imshow(mask[0], vmin=0, vmax=num_classes - 1, cmap="tab10")
+            row_axes[2].imshow(colorize_mask(mask[0]))
             row_axes[2].set_title("Ground truth")
 
         for axis in row_axes:

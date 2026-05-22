@@ -1,6 +1,7 @@
 .DS_Store
 
 __pycache__/
+**/__pycache__/
 *.py[cod]
 .pytest_cache/
 .mypy_cache/
@@ -19,7 +20,18 @@ runs/
 outputs/
 submissions/
 experiments/*.csv
-assets/
+!experiments/results.csv
+assets/*
+!assets/dataset_examples.png
+!assets/prediction_examples.png
+!assets/loss_curves.svg
+!assets/miou_curves.svg
+predictions/
+predictions_raw/
+predictions_color/
+*.tmp
+kaggle/working/
+kaggle/input/
 wandb/
 logs/
 
@@ -40,4 +52,5 @@ submission*.txt
 coverage/
 htmlcov/
 
+.ipynb_checkpoints/
 *.ipynb_checkpoints/
