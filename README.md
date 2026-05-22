@@ -4,7 +4,10 @@
 PyTorch. Репозиторий содержит воспроизводимый CLI-пайплайн, Kaggle runner,
 Kaggle notebook с выполненными экспериментами и реальные результаты обучения.
 
-![Dataset examples](assets/title.jpg)
+
+![Dataset examples](assets/dataset_examples.png)
+
+*Пример изображения, RGB-маски и 8-классовой индексной маски из SUIM.*
 
 ## STAR
 
@@ -108,11 +111,13 @@ Weighted CE повысил mean IoU на `+0.0239`, но заметно сниз
 ### Impact: Image Size
 
 U-Net 128: `mIoU = 0.297318`.
+
 U-Net 256: `mIoU = 0.252723`.
 
-В этой серии U-Net на 128 показал результат выше на `+0.044595 mIoU`. Возможная
-причина — компактная U-Net легче оптимизировалась на меньшем разрешении при тех
-же 20 эпохах.
+В этой серии U-Net на 128 показал результат выше на `+0.044595 mIoU`.
+
+Возможная причина — компактная U-Net легче оптимизировалась на меньшем
+разрешении при тех же 20 эпохах.
 
 ## Training Curves
 
@@ -233,10 +238,6 @@ test/images  -> TEST/images
 
 Выбранные директории печатаются в логах `train.py`, `evaluate.py`, `predict.py`,
 `visualize.py` и `scripts/run_kaggle_experiments.sh`.
-
-![Dataset examples](assets/dataset_examples.png)
-
-*Пример изображения, RGB-маски и 8-классовой индексной маски из SUIM.*
 
 ## Repository Structure
 
