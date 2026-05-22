@@ -83,6 +83,7 @@ runs сохранены в CSV, но не используются для сра
 ### Impact: Pretrained Backbone
 
 DeepLabV3 ResNet50 без pretrained backbone: `mIoU = 0.389566`.
+
 DeepLabV3 ResNet50 с pretrained backbone: `mIoU = 0.634414`.
 
 Прирост: `+0.244848 mIoU` и `+0.096946 pixel accuracy`.
@@ -93,12 +94,16 @@ DeepLabV3 ResNet50 с pretrained backbone: `mIoU = 0.634414`.
 ### Impact: Weighted CE Loss
 
 U-Net 256 без weighting: `mIoU = 0.252723`, `pixel acc = 0.678170`.
+
 U-Net 256 с weighted CE: `mIoU = 0.276628`, `pixel acc = 0.553481`.
 
 Weighted CE повысил mean IoU на `+0.0239`, но заметно снизил pixel accuracy.
+
 По per-class IoU видно, что weighting помогает редким классам: например,
-class 1 вырос с `0` до `0.185`, class 2 с `0` до `0.077`,
-class 4 с `0.000000` до `0.115`.
+
+- class 1 вырос с `0` до `0.185`,
+- class 2 с `0` до `0.077`,
+- class 4 с `0.000000` до `0.115`.
 
 ### Impact: Image Size
 
