@@ -2,6 +2,11 @@ from __future__ import annotations
 
 import torch
 from torch import nn
+from torchvision.models import ResNet50_Weights
+from torchvision.models.segmentation import deeplabv3_resnet50
+
+
+MODEL_CHOICES = ("unet", "deeplabv3_resnet50")
 
 
 class DoubleConv(nn.Module):
@@ -66,6 +71,23 @@ class UNet(nn.Module):
         return self.head(x)
 
 
-def build_model(num_classes: int = 8, features: int = 32) -> nn.Module:
-    """Build the U-Net baseline."""
-    return UNet(num_classes=num_classes, features=features)
+def build_model(
+    model_name: str = "unet",
+    num_classes: int = 8,
+    features: int = 32,
+    pretrained_backbone: bool = False,
+) -> nn.Module:
+    """Build a segmentation model by name."""
+    if model_name == "unet":
+        return UNet(num_classes=num_classes, features=features)
+
+    if model_name == "deeplabv3_resnet50":
+        weights_backbone = ResNet50_Weights.DEFAULT if pretrained_backbone else None
+        return deeplabv3_resnet50(
+            weights=None,
+            weights_backbone=weights_backbone,
+            num_classes=num_classes,
+            aux_loss=True,
+        )
+
+    raise ValueError(f"Unsupported model: {model_name}")

@@ -16,7 +16,7 @@ if __package__ is None or __package__ == "":
 
 from src.dataset import UnderwaterSegmentationDataset, compute_class_weights
 from src.metrics import SegmentationMeter
-from src.model import build_model
+from src.model import MODEL_CHOICES, build_model
 
 
 def parse_args() -> argparse.Namespace:
@@ -24,7 +24,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train underwater segmentation model.")
     parser.add_argument("--images-dir", default=Path("underwater_data/train/images"), type=Path)
     parser.add_argument("--masks-dir", default=Path("underwater_data/train/masks"), type=Path)
-    parser.add_argument("--model", default="unet", choices=["unet"])
+    parser.add_argument("--model", default="unet", choices=MODEL_CHOICES)
     parser.add_argument("--epochs", default=10, type=int)
     parser.add_argument("--batch-size", default=16, type=int)
     parser.add_argument("--lr", default=1e-4, type=float)
@@ -35,17 +35,22 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--features", default=32, type=int)
     parser.add_argument("--num-workers", default=0, type=int)
     parser.add_argument("--weighted-loss", action="store_true")
-    parser.add_argument("--experiment-name", default="unet_8class_baseline")
+    parser.add_argument("--pretrained-backbone", action="store_true")
+    parser.add_argument("--experiment-name", default=None)
     parser.add_argument("--checkpoint-dir", default=Path("checkpoints"), type=Path)
     parser.add_argument("--results-csv", default=Path("experiments/results.csv"), type=Path)
     parser.add_argument("--assets-dir", default=Path("assets"), type=Path)
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.experiment_name is None:
+        args.experiment_name = f"{args.model}_8class_baseline"
+    return args
 
 
 def get_model_output(model: nn.Module, images: torch.Tensor) -> torch.Tensor:
     """Return segmentation logits with shape [B, C, H, W]."""
-    return model(images)
+    output = model(images)
+    return output["out"] if isinstance(output, dict) else output
 
 
 def make_loss(args: argparse.Namespace, device: torch.device) -> nn.Module:
@@ -179,7 +184,12 @@ def main() -> None:
         num_workers=args.num_workers,
     )
 
-    model = build_model(num_classes=args.num_classes, features=args.features).to(device)
+    model = build_model(
+        model_name=args.model,
+        num_classes=args.num_classes,
+        features=args.features,
+        pretrained_backbone=args.pretrained_backbone,
+    ).to(device)
     criterion = make_loss(args, device)
 
     optimizer = torch.optim.AdamW(
@@ -248,6 +258,7 @@ def main() -> None:
                     "model": args.model,
                     "num_classes": args.num_classes,
                     "features": args.features,
+                    "pretrained_backbone": args.pretrained_backbone,
                     "image_size": args.image_size,
                     "experiment_name": args.experiment_name,
                     "metrics": val_metrics,
@@ -283,6 +294,7 @@ def build_results_row(
         "image_size": args.image_size,
         "epochs": args.epochs,
         "weighted_loss": str(args.weighted_loss),
+        "pretrained_backbone": str(args.pretrained_backbone),
         "features": args.features,
         "best_val_miou": best_miou,
         "best_val_pixel_accuracy": best_metrics.get("pixel_accuracy", float("nan")),
