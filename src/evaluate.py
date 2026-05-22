@@ -11,7 +11,7 @@ from tqdm import tqdm
 if __package__ is None or __package__ == "":
     sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from src.dataset import UnderwaterSegmentationDataset
+from src.dataset import DEFAULT_DATA_DIR, UnderwaterSegmentationDataset, resolve_dataset_paths
 from src.metrics import SegmentationMeter
 from src.model import build_model
 from src.train import get_model_output
@@ -20,8 +20,9 @@ from src.train import get_model_output
 def parse_args() -> argparse.Namespace:
     """Parse evaluation CLI arguments."""
     parser = argparse.ArgumentParser(description="Evaluate underwater segmentation checkpoint.")
-    parser.add_argument("--images-dir", default=Path("underwater_data/train/images"), type=Path)
-    parser.add_argument("--masks-dir", default=Path("underwater_data/train/masks"), type=Path)
+    parser.add_argument("--data-dir", default=DEFAULT_DATA_DIR, type=Path)
+    parser.add_argument("--images-dir", default=None, type=Path)
+    parser.add_argument("--masks-dir", default=None, type=Path)
     parser.add_argument("--checkpoint", default=Path("checkpoints/best.pth"), type=Path)
     parser.add_argument("--batch-size", default=16, type=int)
     parser.add_argument("--image-size", default=None, type=int)
@@ -37,6 +38,14 @@ def main() -> None:
     """Load a checkpoint and print validation metrics."""
     args = parse_args()
     device = torch.device(args.device)
+
+    if args.images_dir is None or args.masks_dir is None:
+        resolved_paths = resolve_dataset_paths(args.data_dir)
+        args.images_dir = args.images_dir or resolved_paths["train_images"]
+        args.masks_dir = args.masks_dir or resolved_paths["train_masks"]
+    else:
+        print(f"Selected eval images dir: {args.images_dir}")
+        print(f"Selected eval masks dir: {args.masks_dir}")
 
     checkpoint = torch.load(args.checkpoint, map_location=device)
     model_name = checkpoint.get("model", "unet")

@@ -9,12 +9,28 @@ else
   RUN_SUFFIX="main"
 fi
 
-DATASET_NAME="${DATASET_NAME:-semantic-segmentation-of-underwater-imagery-suim}"
+DATASET_NAME="${DATASET_NAME:-datasets/ashish2001/semantic-segmentation-of-underwater-imagery-suim}"
 DATA_DIR="${DATA_DIR:-/kaggle/input/${DATASET_NAME}}"
 
-TRAIN_IMAGES_DIR="${TRAIN_IMAGES_DIR:-${DATA_DIR}/train_val/images}"
-TRAIN_MASKS_DIR="${TRAIN_MASKS_DIR:-${DATA_DIR}/train_val/masks}"
-TEST_IMAGES_DIR="${TEST_IMAGES_DIR:-${DATA_DIR}/TEST/images}"
+select_existing_dir() {
+  local label="$1"
+  shift
+  local last=""
+  for candidate in "$@"; do
+    last="${candidate}"
+    if [[ -d "${candidate}" ]]; then
+      echo "Selected ${label}: ${candidate}" >&2
+      printf '%s\n' "${candidate}"
+      return 0
+    fi
+  done
+  echo "Selected ${label}: ${last} (not found yet)" >&2
+  printf '%s\n' "${last}"
+}
+
+TRAIN_IMAGES_DIR="${TRAIN_IMAGES_DIR:-$(select_existing_dir "train images dir" "${DATA_DIR}/train/images" "${DATA_DIR}/train_val/images")}"
+TRAIN_MASKS_DIR="${TRAIN_MASKS_DIR:-$(select_existing_dir "train masks dir" "${DATA_DIR}/train/masks" "${DATA_DIR}/train_val/masks")}"
+TEST_IMAGES_DIR="${TEST_IMAGES_DIR:-$(select_existing_dir "test images dir" "${DATA_DIR}/test/images" "${DATA_DIR}/TEST/images")}"
 
 WORKING_DIR="${WORKING_DIR:-/kaggle/working}"
 CHECKPOINT_DIR="${WORKING_DIR}/checkpoints"
@@ -78,6 +94,9 @@ run_train() {
 }
 
 echo "DATA_DIR=${DATA_DIR}"
+echo "TRAIN_IMAGES_DIR=${TRAIN_IMAGES_DIR}"
+echo "TRAIN_MASKS_DIR=${TRAIN_MASKS_DIR}"
+echo "TEST_IMAGES_DIR=${TEST_IMAGES_DIR}"
 echo "WORKING_DIR=${WORKING_DIR}"
 echo "EPOCHS=${EPOCHS}"
 echo "DEVICE=${DEVICE}"

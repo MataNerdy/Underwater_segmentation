@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="520" viewBox="0 0 920 520">
+<rect width="100%" height="100%" fill="white"/>
+<text x="460.0" y="30" text-anchor="middle" font-family="Arial" font-size="20" font-weight="700">Validation Mean IoU Curves</text>
+<line x1="80" y1="445" x2="890" y2="445" stroke="#111827"/>
+<line x1="80" y1="55" x2="80" y2="445" stroke="#111827"/>
+<line x1="80.0" y1="445" x2="80.0" y2="450" stroke="#111827"/>
+<text x="80.0" y="468" text-anchor="middle" font-family="Arial" font-size="12">1</text>
+<line x1="250.5" y1="445" x2="250.5" y2="450" stroke="#111827"/>
+<text x="250.5" y="468" text-anchor="middle" font-family="Arial" font-size="12">5</text>
+<line x1="463.7" y1="445" x2="463.7" y2="450" stroke="#111827"/>
+<text x="463.7" y="468" text-anchor="middle" font-family="Arial" font-size="12">10</text>
+<line x1="676.8" y1="445" x2="676.8" y2="450" stroke="#111827"/>
+<text x="676.8" y="468" text-anchor="middle" font-family="Arial" font-size="12">15</text>
+<line x1="890.0" y1="445" x2="890.0" y2="450" stroke="#111827"/>
+<text x="890.0" y="468" text-anchor="middle" font-family="Arial" font-size="12">20</text>
+<line x1="80" y1="445.0" x2="890" y2="445.0" stroke="#e5e7eb"/>
+<text x="70" y="449.0" text-anchor="end" font-family="Arial" font-size="12">0.104</text>
+<line x1="80" y1="347.5" x2="890" y2="347.5" stroke="#e5e7eb"/>
+<text x="70" y="351.5" text-anchor="end" font-family="Arial" font-size="12">0.246</text>
+<line x1="80" y1="250.0" x2="890" y2="250.0" stroke="#e5e7eb"/>
+<text x="70" y="254.0" text-anchor="end" font-family="Arial" font-size="12">0.389</text>
+<line x1="80" y1="152.5" x2="890" y2="152.5" stroke="#e5e7eb"/>
+<text x="70" y="156.5" text-anchor="end" font-family="Arial" font-size="12">0.531</text>
+<line x1="80" y1="55.0" x2="890" y2="55.0" stroke="#e5e7eb"/>
+<text x="70" y="59.0" text-anchor="end" font-family="Arial" font-size="12">0.674</text>
+<text x="460.0" y="495" text-anchor="middle" font-family="Arial" font-size="14">Epoch</text>
+<text transform="translate(22 260.0) rotate(-90)" text-anchor="middle" font-family="Arial" font-size="14">Validation mean IoU</text>
+<polyline fill="none" stroke="#2563eb" stroke-width="2.5" points="80.0,397.3 122.6,387.7 165.3,380.9 207.9,382.0 250.5,380.3 293.2,374.0 335.8,370.9 378.4,362.2 421.1,362.9 463.7,361.3 506.3,355.2 548.9,353.2 591.6,346.9 634.2,346.5 676.8,344.0 719.5,334.8 762.1,335.2 804.7,348.0 847.4,337.4 890.0,312.5"/>
+<line x1="620" y1="70" x2="642" y2="70" stroke="#2563eb" stroke-width="3"/>
+<text x="648" y="74" font-family="Arial" font-size="12">unet_size128_main</text>
+<polyline fill="none" stroke="#16a34a" stroke-width="2.5" points="80.0,397.4 122.6,390.0 165.3,387.6 207.9,389.9 250.5,385.5 293.2,382.3 335.8,387.8 378.4,374.0 421.1,369.9 463.7,363.0 506.3,367.1 548.9,370.3 591.6,363.0 634.2,355.4 676.8,351.1 719.5,359.5 762.1,345.6 804.7,350.8 847.4,346.8 890.0,343.0"/>
+<line x1="620" y1="92" x2="642" y2="92" stroke="#16a34a" stroke-width="3"/>
+<text x="648" y="96" font-family="Arial" font-size="12">unet_size256_main</text>
+<polyline fill="none" stroke="#dc2626" stroke-width="2.5" points="80.0,418.1 122.6,400.8 165.3,381.4 207.9,383.8 250.5,367.7 293.2,365.7 335.8,365.7 378.4,359.4 421.1,364.5 463.7,358.9 506.3,346.3 548.9,350.0 591.6,346.3 634.2,357.3 676.8,344.1 719.5,335.6 762.1,326.7 804.7,332.3 847.4,348.0 890.0,336.2"/>
+<line x1="620" y1="114" x2="642" y2="114" stroke="#dc2626" stroke-width="3"/>
+<text x="648" y="118" font-family="Arial" font-size="12">unet_weighted_ce_size256_main</text>
+<polyline fill="none" stroke="#9333ea" stroke-width="2.5" points="80.0,366.9 122.6,353.2 165.3,338.9 207.9,319.9 250.5,339.7 293.2,320.5 335.8,318.3 378.4,303.0 421.1,317.7 463.7,291.3 506.3,281.4 548.9,287.3 591.6,295.4 634.2,276.0 676.8,285.9 719.5,272.8 762.1,251.2 804.7,271.5 847.4,249.4 890.0,253.8"/>
+<line x1="620" y1="136" x2="642" y2="136" stroke="#9333ea" stroke-width="3"/>
+<text x="648" y="140" font-family="Arial" font-size="12">deeplabv3_resnet50_size256_main</text>
+<polyline fill="none" stroke="#ea580c" stroke-width="2.5" points="80.0,177.8 122.6,130.5 165.3,110.8 207.9,106.4 250.5,106.7 293.2,100.4 335.8,99.1 378.4,97.8 421.1,90.7 463.7,91.5 506.3,90.7 548.9,83.3 591.6,85.2 634.2,84.8 676.8,88.6 719.5,81.9 762.1,84.4 804.7,83.5 847.4,84.8 890.0,82.6"/>
+<line x1="620" y1="158" x2="642" y2="158" stroke="#ea580c" stroke-width="3"/>
+<text x="648" y="162" font-family="Arial" font-size="12">deeplabv3_resnet50_pretrained_size256_main</text>
+</svg>

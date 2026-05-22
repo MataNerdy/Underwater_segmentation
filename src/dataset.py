@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import numpy as np
@@ -10,6 +11,26 @@ from torch.utils.data import Dataset
 
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"}
+DEFAULT_DATA_DIR = Path(
+    os.environ.get(
+        "DATA_DIR",
+        "/kaggle/input/datasets/ashish2001/semantic-segmentation-of-underwater-imagery-suim",
+    )
+)
+
+CLASS_PALETTE = np.array(
+    [
+        [0, 0, 0],
+        [0, 0, 255],
+        [0, 255, 0],
+        [0, 255, 255],
+        [255, 0, 0],
+        [255, 0, 255],
+        [255, 255, 0],
+        [255, 255, 255],
+    ],
+    dtype=np.uint8,
+)
 
 IMAGENET_MEAN = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1)
 IMAGENET_STD = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1)
@@ -20,6 +41,49 @@ def rgb_mask_to_index(mask: Image.Image | np.ndarray) -> np.ndarray:
     array = np.asarray(mask.convert("RGB") if isinstance(mask, Image.Image) else mask)
     binary = array > 100
     return np.dot(binary, [4, 2, 1]).astype(np.int64)
+
+
+def colorize_mask(mask: Image.Image | np.ndarray | torch.Tensor) -> Image.Image:
+    """Convert a class-index mask to a stable RGB palette visualization."""
+    if isinstance(mask, torch.Tensor):
+        array = mask.detach().cpu().numpy()
+    elif isinstance(mask, Image.Image):
+        array = np.asarray(mask)
+    else:
+        array = np.asarray(mask)
+
+    array = np.clip(array.astype(np.int64), 0, len(CLASS_PALETTE) - 1)
+    return Image.fromarray(CLASS_PALETTE[array])
+
+
+def _select_existing(candidates: list[Path], label: str) -> Path:
+    for path in candidates:
+        if path.exists():
+            print(f"Selected {label}: {path}")
+            return path
+    fallback = candidates[-1]
+    print(f"Selected {label}: {fallback} (not found yet)")
+    return fallback
+
+
+def resolve_dataset_paths(data_dir: str | Path | None = None) -> dict[str, Path]:
+    """Resolve SUIM train/test directories with train -> train_val fallback."""
+    root = Path(data_dir) if data_dir else DEFAULT_DATA_DIR
+    print(f"Selected DATA_DIR: {root}")
+    return {
+        "train_images": _select_existing(
+            [root / "train" / "images", root / "train_val" / "images"],
+            "train images dir",
+        ),
+        "train_masks": _select_existing(
+            [root / "train" / "masks", root / "train_val" / "masks"],
+            "train masks dir",
+        ),
+        "test_images": _select_existing(
+            [root / "test" / "images", root / "TEST" / "images"],
+            "test images dir",
+        ),
+    }
 
 
 def image_to_tensor(image: Image.Image, image_size: int) -> torch.Tensor:
