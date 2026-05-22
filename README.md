@@ -1,6 +1,6 @@
 # Underwater Segmentation
 
-Портфолио-проект по 8-классовой семантической сегментации подводных сцен на
+Проект по 8-классовой семантической сегментации подводных сцен на
 PyTorch. Репозиторий содержит воспроизводимый CLI-пайплайн, Kaggle runner,
 Kaggle notebook с выполненными экспериментами и реальные результаты обучения.
 
@@ -10,17 +10,20 @@ Kaggle notebook с выполненными экспериментами и ре
 
 ### Situation
 
-Подводные изображения сложны для сегментации: низкий контраст, синий/зелёный
-цветовой сдвиг, мутность, мелкие объекты и сильный дисбаланс классов. Исходный
-baseline был notebook-ориентированным, а данные SUIM на Kaggle имеют структуру
-`train_val/` и `TEST/`, поэтому старые учебные предположения о layout были убраны.
+В этом проекте решается задача компьютерного зрения, разделяющая изображение на части, соответствующие конкретным объектам  Это необходимо для автоматизации работы под водой, так как прямая обработка таких изображений сложна из-за искажения света, мутности и отсутствия четких контуров.
+
+Подводные изображения сложны для сегментации:
+
+- низкий контраст,
+- синий/зелёный
+- цветовой сдвиг,
+- мутность,
+- мелкие объекты, сильный дисбаланс классов.
+
 
 ### Task
 
-Нужно было превратить эксперимент в чистый portfolio-ready репозиторий:
-сохранить U-Net baseline, добавить DeepLabV3 ResNet50, корректно читать
-8-классовые RGB-маски, запускать серию Kaggle-экспериментов, сохранять метрики,
-кривые, визуализации и аккуратно документировать реальные результаты.
+Требовалось обучить нейросеть для сегментации подводных сцен. В частности, протестировать несколько моделей: реализовать U-Net baseline, добавить DeepLabV3 ResNet50, провести серию экспериментов, проанализировать и сохранить метрики, кривые, визуализировать предсказания, проинтерпретировать их и аккуратно задокументировать результаты.
 
 ### Action
 
@@ -36,10 +39,164 @@ baseline был notebook-ориентированным, а данные SUIM н
 
 ### Result
 
-Лучший результат показал `DeepLabV3 ResNet50` с pretrained backbone:
-`mean IoU = 0.634414`, `pixel accuracy = 0.822570`. Pretrained backbone дал
-самый заметный прирост качества, weighted CE немного повысил mean IoU для U-Net 256, но существенно снизил pixel accuracy, а U-Net на `image_size=128` оказался лучше U-Net 256 по
-mean IoU в этой серии экспериментов.
+Лучший результат по validation mean IoU за 20 эпох
+показал `DeepLabV3 ResNet50` с pretrained backbone:
+
+- mean IoU = 0.634414
+- pixel accuracy = 0.822570
+
+Pretrained backbone дал самый заметный прирост качества.
+Weighted CE немного повысил mean IoU для U-Net 256,
+но существенно снизил pixel accuracy.
+
+В данной серии экспериментов U-Net с `image_size=128`
+оказался лучше U-Net 256 по mean IoU.
+
+
+## Experiments
+
+В таблице ниже оставлены основные 20-эпоховые эксперименты; 1-эпоховые sanity
+runs сохранены в CSV, но не используются для сравнения качества.
+
+| Experiment | Model | Image size | Weighted CE | Pretrained backbone | Best val mIoU | Best val pixel acc |
+|---|---|---:|---|---|---:|---:|
+| `unet_size128` | U-Net | 128 | no | no | 0.297318 | 0.698849 |
+| `unet_size256` | U-Net | 256 | no | no | 0.252723 | 0.678170 |
+| `unet_weighted_ce_size256` | U-Net | 256 | yes | no | 0.276628 | 0.553481 |
+| `deeplabv3_resnet50_size256` | DeepLabV3 ResNet50 | 256 | no | no | 0.389566 | 0.725624 |
+| `deeplabv3_resnet50_pretrained_size256` | DeepLabV3 ResNet50 | 256 | no | yes | **0.634414** | **0.822570** |
+
+### Best Model
+
+Лучший checkpoint: `deeplabv3_resnet50_pretrained_size256_main`.
+
+Конфигурация:
+
+- model: `deeplabv3_resnet50`;
+- pretrained backbone: yes;
+- image size: 256;
+- epochs: 20;
+- batch size: 16;
+- lr: `1e-4`;
+- weighted CE: no.
+
+### Impact: Pretrained Backbone
+
+DeepLabV3 ResNet50 без pretrained backbone: `mIoU = 0.389566`.
+DeepLabV3 ResNet50 с pretrained backbone: `mIoU = 0.634414`.
+
+Прирост: `+0.244848 mIoU` и `+0.096946 pixel accuracy`.
+
+Это самый сильный
+эффект в проведённой серии.
+
+### Impact: Weighted CE Loss
+
+U-Net 256 без weighting: `mIoU = 0.252723`, `pixel acc = 0.678170`.
+U-Net 256 с weighted CE: `mIoU = 0.276628`, `pixel acc = 0.553481`.
+
+Weighted CE повысил mean IoU на `+0.0239`, но заметно снизил pixel accuracy.
+По per-class IoU видно, что weighting помогает редким классам: например,
+class 1 вырос с `0` до `0.185`, class 2 с `0` до `0.077`,
+class 4 с `0.000000` до `0.115`.
+
+### Impact: Image Size
+
+U-Net 128: `mIoU = 0.297318`.
+U-Net 256: `mIoU = 0.252723`.
+
+В этой серии U-Net на 128 показал результат выше на `+0.044595 mIoU`. Возможная
+причина — компактная U-Net легче оптимизировалась на меньшем разрешении при тех
+же 20 эпохах.
+
+## Training Curves
+
+![Validation loss curves](assets/loss_curves.svg)
+
+*Validation loss по эпохам для пяти основных Kaggle-экспериментов.*
+
+![Validation mean IoU curves](assets/miou_curves.svg)
+
+*Validation mean IoU по эпохам для пяти основных Kaggle-экспериментов.*
+
+## Prediction Visualization
+
+Раньше raw predicted masks сохранялись как PNG с class ids `0..7`, поэтому при
+обычном просмотре выглядели почти чёрными. Теперь `predict.py` сохраняет две
+версии:
+
+- `predictions_raw/` — исходные class-id masks для метрик и submission;
+- `predictions_color/` — RGB-визуализации с фиксированной палитрой 8 классов.
+
+Для обратной совместимости raw PNG также сохраняется в корень `--predictions-dir`.
+
+![Prediction examples](assets/prediction_examples.png)
+
+*Качественные примеры: исходное изображение, цветная prediction mask, ground truth.*
+
+## Model Comparison
+
+Ниже показано qualitative сравнение трёх основных конфигураций:
+
+- U-Net baseline;
+- DeepLabV3 ResNet50;
+- DeepLabV3 ResNet50 с pretrained backbone.
+
+Цветовая палитра классов:
+
+- Yellow — рыбы;
+- Magenta — рифы;
+- Green — морские растения;
+- Cyan — скалы/камни;
+- Blue — дайверы;
+- Red — подводные роботы;
+- White — дно океана;
+- Black — фон / прочее.
+
+![Model comparison](assets/model_compare.png)
+
+### Qualitative observations
+
+- U-Net baseline часто даёт шумные и фрагментированные маски, особенно для
+  мелких объектов и границ.
+
+- DeepLabV3 значительно лучше моделирует крупные области сцены и стабильнее
+  сегментирует foreground-объекты.
+
+- Pretrained backbone даёт наиболее стабильные predictions:
+  - лучше выделяются дайверы;
+  - уменьшается speckle-noise;
+  - улучшается разделение foreground/background;
+  - сцена становится более структурированной.
+
+- Даже pretrained DeepLabV3 всё ещё испытывает сложности с:
+  - тонкими объектами;
+  - мелкими рыбами;
+  - сложными границами;
+  - редкими классами.
+
+Qualitative comparison согласуется с количественными метриками:
+лучший `mean IoU = 0.634414` был достигнут именно у
+`DeepLabV3 ResNet50 + pretrained backbone`.
+
+## Limitations
+
+Эксперименты выполнены на одном train/validation split без k-fold validation.
+Метрики отражают качество baseline-сравнения внутри данного пайплайна, а не
+финальный production-level результат. Checkpoints не хранятся в Git из-за
+размера, но команды для воспроизведения экспериментов сохранены.
+
+## Failure Cases
+
+На qualitative examples видно несколько типичных ошибок:
+
+- U-Net baseline часто даёт шумные границы и speckle-артефакты на объектах;
+- тонкие объекты и мелкие классы сегментируются нестабильно;
+- крупные области воды/фона распознаются лучше, чем небольшие foreground-классы;
+- class imbalance заметен по нулевым или низким IoU для некоторых классов у
+  U-Net и DeepLabV3 без pretrained backbone.
+
+Эти failure cases согласуются с таблицей per-class IoU в `experiments/results.csv`.
 
 ## Dataset
 
@@ -140,150 +297,6 @@ Smoke-test режим запускает те же эксперименты на
 - plots and visualizations: `/kaggle/working/assets`;
 - raw predictions: `predictions_raw/`;
 - colored predictions: `predictions_color/`.
-
-## Experiments
-
-Реальные результаты из `experiments/results.csv`, полученные на Kaggle/Tesla T4.
-В таблице ниже оставлены основные 20-эпоховые эксперименты; 1-эпоховые sanity
-runs сохранены в CSV, но не используются для сравнения качества.
-
-| Experiment | Model | Image size | Weighted CE | Pretrained backbone | Best val mIoU | Best val pixel acc |
-|---|---|---:|---|---|---:|---:|
-| `unet_size128_main` | U-Net | 128 | no | no | 0.297318 | 0.698849 |
-| `unet_size256_main` | U-Net | 256 | no | no | 0.252723 | 0.678170 |
-| `unet_weighted_ce_size256_main` | U-Net | 256 | yes | no | 0.276628 | 0.553481 |
-| `deeplabv3_resnet50_size256_main` | DeepLabV3 ResNet50 | 256 | no | no | 0.389566 | 0.725624 |
-| `deeplabv3_resnet50_pretrained_size256_main` | DeepLabV3 ResNet50 | 256 | no | yes | **0.634414** | **0.822570** |
-
-### Best Model
-
-Лучший checkpoint: `deeplabv3_resnet50_pretrained_size256_main`.
-
-Конфигурация:
-
-- model: `deeplabv3_resnet50`;
-- pretrained backbone: yes;
-- image size: 256;
-- epochs: 20;
-- batch size: 16;
-- lr: `1e-4`;
-- weighted CE: no.
-
-### Impact: Pretrained Backbone
-
-DeepLabV3 ResNet50 без pretrained backbone: `mIoU = 0.389566`.
-DeepLabV3 ResNet50 с pretrained backbone: `mIoU = 0.634414`.
-
-Прирост: `+0.244848 mIoU` и `+0.096946 pixel accuracy`. Это самый сильный
-эффект в проведённой серии.
-
-### Impact: Weighted CE Loss
-
-U-Net 256 без weighting: `mIoU = 0.252723`, `pixel acc = 0.678170`.
-U-Net 256 с weighted CE: `mIoU = 0.276628`, `pixel acc = 0.553481`.
-
-Weighted CE повысил mean IoU на `+0.023905`, но заметно снизил pixel accuracy.
-По per-class IoU видно, что weighting помогает редким классам: например,
-class 1 вырос с `0.000000` до `0.184823`, class 2 с `0.000000` до `0.077282`,
-class 4 с `0.000000` до `0.115001`.
-
-### Impact: Image Size
-
-U-Net 128: `mIoU = 0.297318`.
-U-Net 256: `mIoU = 0.252723`.
-
-В этой серии U-Net на 128 показал результат выше на `+0.044595 mIoU`. Возможная
-причина — компактная U-Net легче оптимизировалась на меньшем разрешении при тех
-же 20 эпохах.
-
-## Training Curves
-
-![Validation loss curves](assets/loss_curves.svg)
-
-*Validation loss по эпохам для пяти основных Kaggle-экспериментов.*
-
-![Validation mean IoU curves](assets/miou_curves.svg)
-
-*Validation mean IoU по эпохам для пяти основных Kaggle-экспериментов.*
-
-## Prediction Visualization
-
-Раньше raw predicted masks сохранялись как PNG с class ids `0..7`, поэтому при
-обычном просмотре выглядели почти чёрными. Теперь `predict.py` сохраняет две
-версии:
-
-- `predictions_raw/` — исходные class-id masks для метрик и submission;
-- `predictions_color/` — RGB-визуализации с фиксированной палитрой 8 классов.
-
-Для обратной совместимости raw PNG также сохраняется в корень `--predictions-dir`.
-
-![Prediction examples](assets/prediction_examples.png)
-
-*Качественные примеры: исходное изображение, цветная prediction mask, ground truth.*
-
-## Model Comparison
-
-Ниже показано qualitative сравнение трёх основных конфигураций:
-
-- U-Net baseline;
-- DeepLabV3 ResNet50;
-- DeepLabV3 ResNet50 с pretrained backbone.
-
-Цветовая палитра классов:
-
-- Yellow — рыбы;
-- Magenta — рифы;
-- Green — морские растения;
-- Cyan — скалы/камни;
-- Blue — дайверы;
-- Red — подводные роботы;
-- White — дно океана;
-- Black — фон / прочее.
-
-![Model comparison](assets/model_compare.png)
-
-### Qualitative observations
-
-- U-Net baseline часто даёт шумные и фрагментированные маски, особенно для
-  мелких объектов и границ.
-
-- DeepLabV3 значительно лучше моделирует крупные области сцены и стабильнее
-  сегментирует foreground-объекты.
-
-- Pretrained backbone даёт наиболее стабильные predictions:
-  - лучше выделяются дайверы;
-  - уменьшается speckle-noise;
-  - улучшается разделение foreground/background;
-  - сцена становится более структурированной.
-
-- Даже pretrained DeepLabV3 всё ещё испытывает сложности с:
-  - тонкими объектами;
-  - мелкими рыбами;
-  - сложными границами;
-  - редкими классами.
-
-Qualitative comparison согласуется с количественными метриками:
-лучший `mean IoU = 0.634414` был достигнут именно у
-`DeepLabV3 ResNet50 + pretrained backbone`.
-
-## Limitations
-
-Эксперименты выполнены на одном train/validation split без k-fold validation.
-Метрики отражают качество baseline-сравнения внутри данного пайплайна, а не
-финальный production-level результат. Checkpoints не хранятся в Git из-за
-размера, но команды для воспроизведения экспериментов сохранены.
-
-## Failure Cases
-
-На qualitative examples видно несколько типичных ошибок:
-
-- U-Net baseline часто даёт шумные границы и speckle-артефакты на объектах;
-- тонкие объекты и мелкие классы сегментируются нестабильно;
-- крупные области воды/фона распознаются лучше, чем небольшие foreground-классы;
-- class imbalance заметен по нулевым или низким IoU для некоторых классов у
-  U-Net и DeepLabV3 без pretrained backbone.
-
-Эти failure cases согласуются с таблицей per-class IoU в `experiments/results.csv`.
 
 ## CLI Examples
 
