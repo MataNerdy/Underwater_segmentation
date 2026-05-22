@@ -26,6 +26,8 @@ assets/*
 !assets/prediction_examples.png
 !assets/loss_curves.svg
 !assets/miou_curves.svg
+!assets/title.jpg
+!assets/model_compare.png
 predictions/
 predictions_raw/
 predictions_color/
